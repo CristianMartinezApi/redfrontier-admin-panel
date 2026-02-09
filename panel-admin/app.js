@@ -152,6 +152,24 @@ const setActiveView = (viewName) => {
 
 const normalizeSteamId = (steamId) => steamId.trim();
 const NOTIFY_DAYS = [2, 0];
+const allowedEmails = [
+  "victorbrizante@gmail.com",
+  "joseinaldoj640@gmail.com",
+  "fernandesribe04@gmail.com",
+  "redfrontierserver@gmail.com",
+];
+const allowedDomains = [];
+
+const isAuthorizedUser = (user) => {
+  const email = user?.email?.toLowerCase();
+  if (!email) return false;
+  if (allowedEmails.map((value) => value.toLowerCase()).includes(email)) {
+    return true;
+  }
+  return allowedDomains
+    .map((value) => value.toLowerCase())
+    .some((domain) => email.endsWith(`@${domain}`));
+};
 
 const validatePlayerForm = (data) => {
   if (!data.steamId) return "SteamID e obrigatorio.";
@@ -666,6 +684,13 @@ onAuthStateChanged(auth, async (user) => {
   setView(isAuthenticated);
   userEmail.textContent = user?.email || "Desconectado";
   if (isAuthenticated) {
+    if (!isAuthorizedUser(user)) {
+      loginError.textContent = "Acesso nao autorizado para esta conta.";
+      await signOut(auth);
+      setView(false);
+      userEmail.textContent = "Desconectado";
+      return;
+    }
     setActiveView("players");
     refreshPlayersList();
     refreshFinanceData();
