@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>REDFRONTIER - Painel Admin</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-grid"></div>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">
+            <img src="assets/rdf.png" alt="REDFRONTIER" class="brand-logo" />
+          </div>
+          <div class="brand-text">
+            <div class="brand-title">REDFRONTIER</div>
+            <div class="brand-sub">Painel Admin DayZ</div>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <button class="nav-btn" data-view="players">Jogadores</button>
+          <button class="nav-btn" data-view="finance">Financeiro</button>
+          <button class="nav-btn" data-view="ban">Banidos</button>
+          <button class="nav-btn" data-view="dashboard">Dashboard</button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="user-chip" id="userEmail">Desconectado</div>
+          <button class="btn btn-ghost" id="logoutBtn">Sair</button>
+        </div>
+      </aside>
+
+      <main class="content">
+        <section class="login-card" id="loginView">
+          <h1>Entrar</h1>
+          <p class="muted">Acesso restrito ao staff.</p>
+          <form id="loginForm" class="form">
+            <label>
+              Email
+              <input
+                type="email"
+                id="loginEmail"
+                required
+                placeholder="seuemail@dominio.com"
+              />
+            </label>
+            <label>
+              Senha
+              <input
+                type="password"
+                id="loginPassword"
+                required
+                placeholder="********"
+              />
+            </label>
+            <button type="submit" class="btn btn-primary">Entrar</button>
+            <button type="button" class="btn btn-google" id="googleLoginBtn">
+              Entrar com Google
+            </button>
+            <p class="form-error" id="loginError"></p>
+          </form>
+        </section>
+
+        <section id="panelView" class="panel hidden">
+          <div class="topbar">
+            <div class="topbar-title">Painel Administrativo</div>
+            <div class="topbar-actions">
+              <button
+                class="btn btn-ghost notif-btn"
+                id="notifBtn"
+                aria-label="Notificacoes"
+              >
+                <span class="notif-icon">🔔</span>
+                <span class="notif-count" id="notifCount">0</span>
+              </button>
+              <div class="notif-panel hidden" id="notifPanel">
+                <div class="notif-header">
+                  <span>Notificacoes</span>
+                </div>
+                <div class="notif-list" id="notifList"></div>
+              </div>
+            </div>
+          </div>
+          <div class="modal hidden" id="notifModal">
+            <div class="modal-card" role="dialog" aria-modal="true">
+              <div class="modal-header">
+                <div class="modal-title" id="notifModalTitle">Notificacao</div>
+                <button class="btn btn-ghost" id="notifModalClose">
+                  Fechar
+                </button>
+              </div>
+              <div class="modal-body" id="notifModalBody"></div>
+            </div>
+          </div>
+          <section id="dashboardView" class="view">
+            <header class="panel-header">
+              <div>
+                <h2>Dashboard</h2>
+                <p class="muted">Visao geral do painel.</p>
+              </div>
+            </header>
+
+            <section class="grid">
+              <div class="card">
+                <h3>Financeiro</h3>
+                <div class="stat">
+                  <div class="stat-label">Total registrado</div>
+                  <div class="stat-value" id="financeTotal">R$ 0,00</div>
+                  <div class="stat-sub" id="financeCount">0 entradas</div>
+                </div>
+              </div>
+              <div class="card">
+                <h3>Loja GRABS</h3>
+                <div class="stat">
+                  <div class="stat-label">Total GRABS</div>
+                  <div class="stat-value" id="financeTotalGrabs">R$ 0,00</div>
+                </div>
+              </div>
+              <div class="card">
+                <h3>VIPs</h3>
+                <div class="stat">
+                  <div class="stat-label">Total VIPs</div>
+                  <div class="stat-value" id="financeTotalVips">R$ 0,00</div>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <section id="playersView" class="view">
+            <header class="panel-header">
+              <div>
+                <h2>Gestao de Jogadores</h2>
+                <p class="muted">Registre, atualize e controle VIP/Seguro.</p>
+              </div>
+              <div class="header-actions">
+                <button class="btn btn-outline" id="refreshBtn">
+                  Atualizar
+                </button>
+              </div>
+            </header>
+
+            <section class="grid">
+              <div class="card">
+                <h3>Buscar jogador</h3>
+                <form id="searchForm" class="form-inline">
+                  <input
+                    type="text"
+                    id="searchSteamId"
+                    placeholder="SteamID"
+                    required
+                  />
+                  <button type="submit" class="btn btn-primary">Buscar</button>
+                </form>
+                <div id="searchResult" class="search-result"></div>
+              </div>
+
+              <div class="card">
+                <h3>Cadastro manual</h3>
+                <form id="createForm" class="form">
+                  <label>
+                    SteamID
+                    <input
+                      type="text"
+                      id="createSteamId"
+                      required
+                      placeholder="7656119..."
+                    />
+                  </label>
+                  <label>
+                    Nick
+                    <input type="text" id="createNick" required />
+                  </label>
+                  <label>
+                    Nome
+                    <input type="text" id="createNome" required />
+                  </label>
+                  <label class="checkbox">
+                    <input type="checkbox" id="createWhitelist" />
+                    Whitelist
+                  </label>
+                  <label class="checkbox">
+                    <input type="checkbox" id="createBanido" />
+                    Banido
+                  </label>
+                  <p class="form-note" id="createNotice"></p>
+                  <button type="submit" class="btn btn-primary">
+                    Cadastrar
+                  </button>
+                  <p class="form-error" id="createError"></p>
+                </form>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3>Lista de cadastrados</h3>
+                  <button class="btn btn-outline" id="playersListRefreshBtn">
+                    Atualizar lista
+                  </button>
+                </div>
+                <div class="list-tools">
+                  <input
+                    type="text"
+                    id="playersFilter"
+                    placeholder="Filtrar por nick ou SteamID"
+                  />
+                  <select id="playersPageSize">
+                    <option value="10">10 por pagina</option>
+                    <option value="20" selected>20 por pagina</option>
+                    <option value="50">50 por pagina</option>
+                  </select>
+                </div>
+                <div class="players-list" id="playersList"></div>
+                <div class="list-pagination">
+                  <button class="btn btn-ghost" id="playersPrevBtn">
+                    Anterior
+                  </button>
+                  <div class="pagination-info" id="playersPageInfo">
+                    Pagina 1 de 1
+                  </div>
+                  <button class="btn btn-ghost" id="playersNextBtn">
+                    Proxima
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section class="card">
+              <h3>Detalhes do jogador</h3>
+              <div class="detail-grid">
+                <div>
+                  <div class="detail-label">Status</div>
+                  <div class="detail-value" id="detailStatus">-</div>
+                </div>
+                <div>
+                  <div class="detail-label">VIP</div>
+                  <div class="detail-value" id="detailVip">-</div>
+                </div>
+                <div>
+                  <div class="detail-label">Seguro</div>
+                  <div class="detail-value" id="detailSeguro">-</div>
+                </div>
+                <div>
+                  <div class="detail-label">Criado em</div>
+                  <div class="detail-value" id="detailCreated">-</div>
+                </div>
+                <div>
+                  <div class="detail-label">Atualizado em</div>
+                  <div class="detail-value" id="detailUpdated">-</div>
+                </div>
+                <div>
+                  <div class="detail-label">Ultimo login</div>
+                  <div class="detail-value" id="detailLastSeen">-</div>
+                </div>
+              </div>
+              <div class="warning" id="detailWarning"></div>
+            </section>
+
+            <section class="card">
+              <h3>Editar jogador</h3>
+              <form id="editForm" class="form two-cols">
+                <label>
+                  SteamID (somente leitura)
+                  <input type="text" id="editSteamId" readonly />
+                </label>
+                <label>
+                  Nick
+                  <input type="text" id="editNick" required />
+                </label>
+                <label>
+                  Nome
+                  <input type="text" id="editNome" required />
+                </label>
+                <label class="checkbox">
+                  <input type="checkbox" id="editWhitelist" />
+                  Whitelist
+                </label>
+                <label class="checkbox">
+                  <input type="checkbox" id="editBanido" />
+                  Banido
+                </label>
+
+                <div class="section-title">VIP</div>
+                <label class="checkbox">
+                  <input type="checkbox" id="editVipAtivo" />
+                  VIP ativo
+                </label>
+                <label>
+                  Tipo VIP
+                  <select id="editVipTipo">
+                    <option value="">Selecione</option>
+                    <option value="vip fila">VIP fila</option>
+                    <option value="vip roupa">VIP roupa</option>
+                  </select>
+                </label>
+                <label>
+                  Duracao VIP
+                  <select id="editVipDuracao">
+                    <option value="">Selecione</option>
+                    <option value="7">7 dias</option>
+                    <option value="15">15 dias</option>
+                    <option value="30">Mensal (30 dias)</option>
+                  </select>
+                </label>
+
+                <div class="section-title">Seguro</div>
+                <label class="checkbox">
+                  <input type="checkbox" id="editSeguroAtivo" />
+                  Seguro ativo
+                </label>
+                <label>
+                  Tipo Seguro
+                  <input
+                    type="text"
+                    id="editSeguroTipo"
+                    placeholder="Base, Veiculo..."
+                  />
+                </label>
+                <label>
+                  Data fim Seguro
+                  <input type="date" id="editSeguroFim" />
+                </label>
+
+                <button type="submit" class="btn btn-primary">
+                  Salvar alteracoes
+                </button>
+                <p class="form-error" id="editError"></p>
+              </form>
+            </section>
+          </section>
+
+          <section id="financeView" class="view">
+            <header class="panel-header">
+              <div>
+                <h2>Financeiro</h2>
+                <p class="muted">Registre entradas para o dashboard.</p>
+              </div>
+              <div class="header-actions">
+                <button class="btn btn-outline" id="financeRefreshBtn">
+                  Atualizar
+                </button>
+                <button class="btn btn-ghost" id="financeExportBtn">
+                  Exportar CSV
+                </button>
+              </div>
+            </header>
+
+            <section class="grid">
+              <div class="card">
+                <h3>Registrar entrada</h3>
+                <form id="financeForm" class="form">
+                  <label>
+                    Valor (R$)
+                    <input
+                      type="number"
+                      id="financeAmount"
+                      min="0"
+                      step="0.01"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Origem
+                    <select id="financeSource" required>
+                      <option value="">Selecione</option>
+                      <option value="loja GRABS">Loja GRABS</option>
+                      <option value="VIPs">VIPs</option>
+                    </select>
+                  </label>
+                  <label>
+                    Descricao
+                    <input type="text" id="financeDescription" required />
+                  </label>
+                  <label>
+                    Referencia (opcional)
+                    <input type="text" id="financeReference" />
+                  </label>
+                  <button type="submit" class="btn btn-primary">
+                    Registrar
+                  </button>
+                  <p class="form-error" id="financeError"></p>
+                </form>
+              </div>
+
+              <div class="card">
+                <h3>Ultimas entradas</h3>
+                <div class="finance-list" id="financeList"></div>
+              </div>
+            </section>
+          </section>
+
+          <section id="banView" class="view">
+            <header class="panel-header">
+              <div>
+                <h2>Banidos</h2>
+                <p class="muted">Gerencie a lista global de banimentos.</p>
+              </div>
+              <div class="header-actions">
+                <button class="btn btn-outline" id="banRefreshBtn">
+                  Atualizar
+                </button>
+              </div>
+            </header>
+
+            <section class="grid">
+              <div class="card">
+                <h3>Adicionar banimento</h3>
+                <form id="banForm" class="form">
+                  <label>
+                    SteamID
+                    <input type="text" id="banSteamId" required />
+                  </label>
+                  <label>
+                    Motivo (opcional)
+                    <input type="text" id="banReason" />
+                  </label>
+                  <button type="submit" class="btn btn-primary">
+                    Adicionar
+                  </button>
+                  <p class="form-error" id="banError"></p>
+                </form>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3>Lista de banidos</h3>
+                </div>
+                <div class="ban-list" id="banList"></div>
+              </div>
+            </section>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="firebase.js"></script>
+    <script type="module" src="playerService.js?v=2"></script>
+    <script type="module" src="app.js?v=2"></script>
+  </body>
+</html>
