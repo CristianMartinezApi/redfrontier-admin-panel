@@ -4,7 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>REDFRONTIER - Painel Admin</title>
-    <link rel="stylesheet" href="styles.css?v=4" />
+    <link rel="icon" href="assets/favicon.ico" type="image/x-icon" />
+    <link rel="icon" href="assets/rdf.png" type="image/png" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div class="bg-grid"></div>
@@ -144,6 +146,79 @@
                 <div class="stat">
                   <div class="stat-label">Total VIPs</div>
                   <div class="stat-value" id="financeTotalVips">R$ 0,00</div>
+                </div>
+              </div>
+              <div class="card">
+                <h3>Saidas</h3>
+                <div class="stat">
+                  <div class="stat-label">Total pagamentos</div>
+                  <div class="stat-value" id="financeTotalExpenses">
+                    R$ 0,00
+                  </div>
+                  <div class="stat-sub" id="financeExpenseCount">0 saidas</div>
+                </div>
+              </div>
+              <div class="card">
+                <h3>Saldo</h3>
+                <div class="stat">
+                  <div class="stat-label">Resultado total</div>
+                  <div class="stat-value" id="financeNet">R$ 0,00</div>
+                  <div class="stat-sub">Entradas - saidas</div>
+                </div>
+              </div>
+            </section>
+
+            <section class="grid">
+              <div class="card chart-card">
+                <div class="card-header">
+                  <h3>Entradas x saidas</h3>
+                  <span class="chip">Ultimos 6 meses</span>
+                </div>
+                <div class="chart-wrap">
+                  <canvas
+                    id="financeTrendChart"
+                    role="img"
+                    aria-label="Grafico de entradas e saidas por mes"
+                  ></canvas>
+                </div>
+              </div>
+              <div class="card chart-card">
+                <div class="card-header">
+                  <h3>Origem da receita</h3>
+                  <span class="chip">Distribuicao</span>
+                </div>
+                <div class="chart-wrap">
+                  <canvas
+                    id="financeSourceChart"
+                    role="img"
+                    aria-label="Grafico de origem da receita"
+                  ></canvas>
+                </div>
+              </div>
+              <div class="card chart-card">
+                <div class="card-header">
+                  <h3>Pagamentos por categoria</h3>
+                  <span class="chip">Saidas</span>
+                </div>
+                <div class="chart-wrap">
+                  <canvas
+                    id="expenseCategoryChart"
+                    role="img"
+                    aria-label="Grafico de pagamentos por categoria"
+                  ></canvas>
+                </div>
+              </div>
+              <div class="card chart-card">
+                <div class="card-header">
+                  <h3>Status de beneficios</h3>
+                  <span class="chip">VIP e Seguro</span>
+                </div>
+                <div class="chart-wrap">
+                  <canvas
+                    id="benefitsChart"
+                    role="img"
+                    aria-label="Grafico de status de beneficios"
+                  ></canvas>
                 </div>
               </div>
             </section>
@@ -355,7 +430,9 @@
             <header class="panel-header">
               <div>
                 <h2>Financeiro</h2>
-                <p class="muted">Registre entradas para o dashboard.</p>
+                <p class="muted">
+                  Registre entradas e saidas para o dashboard.
+                </p>
               </div>
               <div class="header-actions">
                 <button class="btn btn-outline" id="financeRefreshBtn">
@@ -374,10 +451,10 @@
                   <label>
                     Valor (R$)
                     <input
-                      type="number"
+                      type="text"
                       id="financeAmount"
-                      min="0"
-                      step="0.01"
+                      inputmode="decimal"
+                      placeholder="0,00"
                       required
                     />
                   </label>
@@ -405,8 +482,51 @@
               </div>
 
               <div class="card">
+                <h3>Registrar saida/pagamento</h3>
+                <form id="expenseForm" class="form">
+                  <label>
+                    Valor (R$)
+                    <input
+                      type="text"
+                      id="expenseAmount"
+                      inputmode="decimal"
+                      placeholder="0,00"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Categoria
+                    <select id="expenseCategory" required>
+                      <option value="">Selecione</option>
+                      <option value="host">Host</option>
+                      <option value="stremer">Stremer</option>
+                      <option value="mods">Mods</option>
+                      <option value="telagem">Telagem</option>
+                    </select>
+                  </label>
+                  <label>
+                    Descricao
+                    <input type="text" id="expenseDescription" required />
+                  </label>
+                  <label>
+                    Referencia (opcional)
+                    <input type="text" id="expenseReference" />
+                  </label>
+                  <button type="submit" class="btn btn-primary">
+                    Registrar
+                  </button>
+                  <p class="form-error" id="expenseError"></p>
+                </form>
+              </div>
+
+              <div class="card">
                 <h3>Ultimas entradas</h3>
                 <div class="finance-list" id="financeList"></div>
+              </div>
+
+              <div class="card">
+                <h3>Ultimas saidas</h3>
+                <div class="finance-list" id="expenseList"></div>
               </div>
             </section>
           </section>
@@ -455,6 +575,7 @@
       </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script type="module" src="firebase.js"></script>
     <script type="module" src="playerService.js?v=2"></script>
     <script type="module" src="app.js?v=2"></script>
