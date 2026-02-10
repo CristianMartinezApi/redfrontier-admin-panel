@@ -23,9 +23,13 @@ import {
 } from "./playerService.js";
 import {
   addFinanceEntry,
+  addExpenseEntry,
   listFinanceEntries,
   listAllFinanceEntries,
+  listExpenseEntries,
+  listAllExpenseEntries,
   getFinanceSummary,
+  getExpenseSummary,
 } from "./financeService.js";
 import {
   upsertNotification,
@@ -86,11 +90,27 @@ const financeDescription = document.getElementById("financeDescription");
 const financeReference = document.getElementById("financeReference");
 const financeError = document.getElementById("financeError");
 const financeList = document.getElementById("financeList");
+const expenseForm = document.getElementById("expenseForm");
+const expenseAmount = document.getElementById("expenseAmount");
+const expenseCategory = document.getElementById("expenseCategory");
+const expenseDescription = document.getElementById("expenseDescription");
+const expenseReference = document.getElementById("expenseReference");
+const expenseError = document.getElementById("expenseError");
+const expenseList = document.getElementById("expenseList");
 const financeTotal = document.getElementById("financeTotal");
 const financeTotalGrabs = document.getElementById("financeTotalGrabs");
 const financeTotalVips = document.getElementById("financeTotalVips");
+const financeTotalExpenses = document.getElementById("financeTotalExpenses");
+const financeExpenseCount = document.getElementById("financeExpenseCount");
+const financeNet = document.getElementById("financeNet");
 const financeCount = document.getElementById("financeCount");
 const financeExportBtn = document.getElementById("financeExportBtn");
+const financeTrendChartCanvas = document.getElementById("financeTrendChart");
+const financeSourceChartCanvas = document.getElementById("financeSourceChart");
+const expenseCategoryChartCanvas = document.getElementById(
+  "expenseCategoryChart",
+);
+const benefitsChartCanvas = document.getElementById("benefitsChart");
 
 const notifBtn = document.getElementById("notifBtn");
 const notifCount = document.getElementById("notifCount");
@@ -127,6 +147,14 @@ let playersFiltered = [];
 let playersPage = 1;
 let notificationsCleanupDone = false;
 let currentPlayer = null;
+let financeTrendChart = null;
+let financeSourceChart = null;
+let expenseCategoryChart = null;
+let benefitsChart = null;
+let dashboardFinanceEntries = [];
+let dashboardFinanceSummary = null;
+let dashboardExpenseEntries = [];
+let dashboardExpenseSummary = null;
 
 const setView = (isAuthenticated) => {
   loginView.classList.toggle("hidden", isAuthenticated);
@@ -307,6 +335,338 @@ const formatCurrency = (value) =>
     currency: "BRL",
   }).format(value);
 
+const formatCurrencyInput = (value) =>
+  new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+
+const parseAmount = (value) => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return 0;
+    }
+    const cleaned = trimmed.replace(/[^\d.,-]/g, "");
+    const normalized = cleaned.includes(",")
+      ? cleaned.replace(/\./g, "").replace(",", ".")
+      : cleaned;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const setupCurrencyInput = (input) => {
+  if (!input) {
+    return;
+  }
+  const formatFromDigits = (digits) => {
+    const number = digits ? Number(digits) / 100 : 0;
+    return number ? formatCurrencyInput(number) : "";
+  };
+
+  input.addEventListener("input", () => {
+    const digits = input.value.replace(/\D/g, "");
+    input.value = formatFromDigits(digits);
+    input.setSelectionRange(input.value.length, input.value.length);
+  });
+
+  input.addEventListener("blur", () => {
+    const digits = input.value.replace(/\D/g, "");
+    input.value = formatFromDigits(digits);
+  });
+};
+
+const resolveSettled = (result, fallback) =>
+  result.status === "fulfilled" ? result.value : fallback;
+
+const getChartColors = () => {
+  const styles = getComputedStyle(document.documentElement);
+  return {
+    text: styles.getPropertyValue("--text").trim() || "#e6edf3",
+    muted: styles.getPropertyValue("--muted").trim() || "#98a2b3",
+    line: styles.getPropertyValue("--line").trim() || "#27314f",
+    accent: styles.getPropertyValue("--accent").trim() || "#ffb703",
+    accent2: styles.getPropertyValue("--accent-2").trim() || "#ff7a00",
+    success: styles.getPropertyValue("--success").trim() || "#12b981",
+    danger: styles.getPropertyValue("--danger").trim() || "#f97066",
+  };
+};
+
+const getEntryDate = (entry) =>
+  entry?.createdAt?.toDate ? entry.createdAt.toDate() : null;
+
+const buildMonthBuckets = (monthsCount) => {
+  const buckets = [];
+  const now = new Date();
+  for (let i = monthsCount - 1; i >= 0; i -= 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const label = date.toLocaleString("pt-BR", { month: "short" });
+    buckets.push({
+      key,
+      label: `${label.replace(".", "")}/${String(date.getFullYear()).slice(-2)}`,
+      total: 0,
+    });
+  }
+  return buckets;
+};
+
+const updateFinanceTrendChart = (entries, expenses) => {
+  if (!financeTrendChartCanvas || !window.Chart) {
+    return;
+  }
+  const colors = getChartColors();
+  const buckets = buildMonthBuckets(6);
+  const bucketMap = new Map(buckets.map((bucket) => [bucket.key, bucket]));
+  const expenseTotals = buckets.map(() => 0);
+
+  entries.forEach((entry) => {
+    const date = getEntryDate(entry);
+    if (!date) {
+      return;
+    }
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const bucket = bucketMap.get(key);
+    if (bucket) {
+      bucket.total += parseAmount(entry.amount);
+    }
+  });
+
+  expenses.forEach((entry) => {
+    const date = getEntryDate(entry);
+    if (!date) {
+      return;
+    }
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const index = buckets.findIndex((bucket) => bucket.key === key);
+    if (index >= 0) {
+      expenseTotals[index] += parseAmount(entry.amount);
+    }
+  });
+
+  const data = {
+    labels: buckets.map((bucket) => bucket.label),
+    datasets: [
+      {
+        label: "Entradas",
+        data: buckets.map((bucket) => bucket.total),
+        borderColor: colors.accent,
+        backgroundColor: "rgba(255, 183, 3, 0.2)",
+        tension: 0.35,
+        fill: true,
+        pointRadius: 3,
+      },
+      {
+        label: "Saidas",
+        data: expenseTotals,
+        borderColor: colors.danger,
+        backgroundColor: "rgba(249, 112, 102, 0.18)",
+        tension: 0.35,
+        fill: true,
+        pointRadius: 3,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: {
+          color: colors.text,
+        },
+      },
+    },
+    scales: {
+      x: {
+        ticks: { color: colors.muted },
+        grid: { color: "rgba(39, 49, 79, 0.4)" },
+      },
+      y: {
+        ticks: {
+          color: colors.muted,
+          callback: (value) => formatCurrency(value),
+        },
+        grid: { color: "rgba(39, 49, 79, 0.4)" },
+      },
+    },
+  };
+
+  if (financeTrendChart) {
+    financeTrendChart.data = data;
+    financeTrendChart.options = options;
+    financeTrendChart.update();
+  } else {
+    financeTrendChart = new window.Chart(financeTrendChartCanvas, {
+      type: "line",
+      data,
+      options,
+    });
+  }
+};
+
+const updateFinanceSourceChart = (summary) => {
+  if (!financeSourceChartCanvas || !window.Chart || !summary) {
+    return;
+  }
+  const colors = getChartColors();
+  const totals = summary.totalsBySource || {};
+  const labels = Object.keys(totals);
+  const values = labels.map((label) => Number(totals[label] || 0));
+
+  const data = {
+    labels,
+    datasets: [
+      {
+        data: values,
+        backgroundColor: [colors.accent, colors.accent2, colors.success],
+        borderColor: colors.line,
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: {
+          color: colors.text,
+        },
+      },
+    },
+  };
+
+  if (financeSourceChart) {
+    financeSourceChart.data = data;
+    financeSourceChart.options = options;
+    financeSourceChart.update();
+  } else {
+    financeSourceChart = new window.Chart(financeSourceChartCanvas, {
+      type: "doughnut",
+      data,
+      options,
+    });
+  }
+};
+
+const updateExpenseCategoryChart = (summary) => {
+  if (!expenseCategoryChartCanvas || !window.Chart || !summary) {
+    return;
+  }
+  const colors = getChartColors();
+  const totals = summary.totalsByCategory || {};
+  const labels = Object.keys(totals);
+  const values = labels.map((label) => Number(totals[label] || 0));
+
+  const data = {
+    labels,
+    datasets: [
+      {
+        data: values,
+        backgroundColor: [colors.danger, colors.accent2, colors.muted],
+        borderColor: colors.line,
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: {
+          color: colors.text,
+        },
+      },
+    },
+  };
+
+  if (expenseCategoryChart) {
+    expenseCategoryChart.data = data;
+    expenseCategoryChart.options = options;
+    expenseCategoryChart.update();
+  } else {
+    expenseCategoryChart = new window.Chart(expenseCategoryChartCanvas, {
+      type: "doughnut",
+      data,
+      options,
+    });
+  }
+};
+
+const updateBenefitsChart = (players) => {
+  if (!benefitsChartCanvas || !window.Chart || !players?.length) {
+    return;
+  }
+  const colors = getChartColors();
+  const vipCount = players.filter((player) => player.vip?.ativo).length;
+  const seguroCount = players.filter((player) => player.seguro?.ativo).length;
+  const banCount = players.filter((player) => player.status?.banido).length;
+
+  const data = {
+    labels: ["VIP ativo", "Seguro ativo", "Banidos"],
+    datasets: [
+      {
+        data: [vipCount, seguroCount, banCount],
+        backgroundColor: [colors.accent, colors.success, colors.danger],
+        borderColor: colors.line,
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+    },
+    scales: {
+      x: {
+        ticks: { color: colors.muted },
+        grid: { color: "rgba(39, 49, 79, 0.4)" },
+      },
+      y: {
+        ticks: { color: colors.muted, precision: 0 },
+        grid: { color: "rgba(39, 49, 79, 0.4)" },
+        beginAtZero: true,
+      },
+    },
+  };
+
+  if (benefitsChart) {
+    benefitsChart.data = data;
+    benefitsChart.options = options;
+    benefitsChart.update();
+  } else {
+    benefitsChart = new window.Chart(benefitsChartCanvas, {
+      type: "bar",
+      data,
+      options,
+    });
+  }
+};
+
+const updateDashboardCharts = () => {
+  updateFinanceTrendChart(dashboardFinanceEntries, dashboardExpenseEntries);
+  updateFinanceSourceChart(dashboardFinanceSummary);
+  updateExpenseCategoryChart(dashboardExpenseSummary);
+  updateBenefitsChart(playersCache);
+};
+
 const buildCsv = (rows) => {
   const escapeValue = (value) => {
     const text = String(value ?? "").replace(/"/g, '""');
@@ -335,7 +695,33 @@ const renderFinanceList = (entries) => {
             <div>${entry.description}</div>
             <div class="finance-meta">${dateText}${source}${reference}</div>
           </div>
-          <div>${formatCurrency(entry.amount || 0)}</div>
+          <div>${formatCurrency(parseAmount(entry.amount))}</div>
+        </div>
+      `;
+    })
+    .join("");
+};
+
+const renderExpenseList = (entries) => {
+  if (!entries.length) {
+    expenseList.textContent = "Nenhuma saida registrada.";
+    return;
+  }
+
+  expenseList.innerHTML = entries
+    .map((entry) => {
+      const dateText = entry.createdAt?.toDate
+        ? entry.createdAt.toDate().toLocaleDateString("pt-BR")
+        : "-";
+      const reference = entry.reference ? ` • ${entry.reference}` : "";
+      const category = entry.category ? ` • ${entry.category}` : "";
+      return `
+        <div class="finance-item">
+          <div>
+            <div>${entry.description}</div>
+            <div class="finance-meta">${dateText}${category}${reference}</div>
+          </div>
+          <div>${formatCurrency(parseAmount(entry.amount))}</div>
         </div>
       `;
     })
@@ -613,14 +999,41 @@ const refreshPlayersList = async () => {
   playersCache = players;
   applyPlayersFilter();
   await syncExpiringNotifications(players);
+  updateDashboardCharts();
 };
 
 const refreshFinanceData = async () => {
-  const [entries, summary] = await Promise.all([
+  const results = await Promise.allSettled([
     listFinanceEntries(10),
     getFinanceSummary(),
+    listAllFinanceEntries(),
+    listExpenseEntries(10),
+    getExpenseSummary(),
+    listAllExpenseEntries(),
   ]);
+  const entries = resolveSettled(results[0], []);
+  const summary = resolveSettled(results[1], {
+    total: 0,
+    count: 0,
+    totalsBySource: {
+      "loja GRABS": 0,
+      VIPs: 0,
+    },
+  });
+  const allEntries = resolveSettled(results[2], []);
+  const expenseEntries = resolveSettled(results[3], []);
+  const expenseSummary = resolveSettled(results[4], {
+    total: 0,
+    count: 0,
+    totalsByCategory: {},
+  });
+  const allExpenseEntries = resolveSettled(results[5], []);
   renderFinanceList(entries);
+  if (results[3].status === "rejected") {
+    expenseList.textContent = "Nao foi possivel carregar as saidas.";
+  } else {
+    renderExpenseList(expenseEntries);
+  }
   financeTotal.textContent = formatCurrency(summary.total || 0);
   financeTotalGrabs.textContent = formatCurrency(
     summary.totalsBySource?.["loja GRABS"] || 0,
@@ -629,6 +1042,16 @@ const refreshFinanceData = async () => {
     summary.totalsBySource?.VIPs || 0,
   );
   financeCount.textContent = `${summary.count} entradas`;
+  financeTotalExpenses.textContent = formatCurrency(expenseSummary.total || 0);
+  financeExpenseCount.textContent = `${expenseSummary.count} saidas`;
+  financeNet.textContent = formatCurrency(
+    (summary.total || 0) - (expenseSummary.total || 0),
+  );
+  dashboardFinanceEntries = allEntries;
+  dashboardFinanceSummary = summary;
+  dashboardExpenseEntries = allExpenseEntries;
+  dashboardExpenseSummary = expenseSummary;
+  updateDashboardCharts();
 };
 
 const refreshBanList = async () => {
@@ -854,11 +1277,14 @@ playersList.addEventListener("click", async (event) => {
   }
 });
 
+setupCurrencyInput(financeAmount);
+setupCurrencyInput(expenseAmount);
+
 financeForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   financeError.textContent = "";
 
-  const amountValue = Number(financeAmount.value);
+  const amountValue = parseAmount(financeAmount.value);
   if (!amountValue || amountValue <= 0) {
     financeError.textContent = "Informe um valor valido.";
     return;
@@ -885,6 +1311,40 @@ financeForm.addEventListener("submit", async (event) => {
     await refreshFinanceData();
   } catch (error) {
     financeError.textContent = "Erro ao registrar entrada.";
+  }
+});
+
+expenseForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  expenseError.textContent = "";
+
+  const amountValue = parseAmount(expenseAmount.value);
+  if (!amountValue || amountValue <= 0) {
+    expenseError.textContent = "Informe um valor valido.";
+    return;
+  }
+
+  if (!expenseCategory.value) {
+    expenseError.textContent = "Informe a categoria.";
+    return;
+  }
+
+  if (!expenseDescription.value.trim()) {
+    expenseError.textContent = "Informe a descricao.";
+    return;
+  }
+
+  try {
+    await addExpenseEntry({
+      amount: amountValue,
+      category: expenseCategory.value,
+      description: expenseDescription.value.trim(),
+      reference: expenseReference.value.trim(),
+    });
+    expenseForm.reset();
+    await refreshFinanceData();
+  } catch (error) {
+    expenseError.textContent = "Erro ao registrar saida.";
   }
 });
 
@@ -973,19 +1433,31 @@ banList.addEventListener("click", async (event) => {
 });
 
 financeExportBtn.addEventListener("click", async () => {
-  const entries = await listAllFinanceEntries();
+  const [entries, expenses] = await Promise.all([
+    listAllFinanceEntries(),
+    listAllExpenseEntries(),
+  ]);
+  const merged = [
+    ...entries.map((entry) => ({ ...entry, kind: "entrada" })),
+    ...expenses.map((entry) => ({ ...entry, kind: "saida" })),
+  ].sort((a, b) => {
+    const dateA = getEntryDate(a) || new Date(0);
+    const dateB = getEntryDate(b) || new Date(0);
+    return dateB - dateA;
+  });
   const rows = [
-    ["Data", "Origem", "Descricao", "Referencia", "Valor"],
-    ...entries.map((entry) => {
+    ["Data", "Tipo", "Origem/Categoria", "Descricao", "Referencia", "Valor"],
+    ...merged.map((entry) => {
       const dateText = entry.createdAt?.toDate
         ? entry.createdAt.toDate().toLocaleDateString("pt-BR")
         : "";
       return [
         dateText,
-        entry.source || "",
+        entry.kind,
+        entry.kind === "entrada" ? entry.source || "" : entry.category || "",
         entry.description || "",
         entry.reference || "",
-        entry.amount || 0,
+        parseAmount(entry.amount),
       ];
     }),
   ];
