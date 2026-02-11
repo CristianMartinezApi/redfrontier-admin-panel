@@ -41,23 +41,10 @@
           <p class="muted">Acesso restrito ao staff.</p>
           <form id="loginForm" class="form">
             <label>
-              Email
-              <input
-                type="email"
-                id="loginEmail"
-                required
-                placeholder="seuemail@dominio.com"
-              />
-            </label>
-            <label>
-              Senha
-              <input
-                type="password"
-                id="loginPassword"
-                required
-                placeholder="********"
-              />
-            </label>
+                        Ano
+                        <select id="filterYear" class="input">
+                          <option value="">Todos</option>
+                        </select>
             <button type="submit" class="btn btn-primary">Entrar</button>
             <button type="button" class="btn btn-google" id="googleLoginBtn">
               <span class="google-icon" aria-hidden="true">
@@ -125,7 +112,65 @@
               </div>
             </header>
 
+            <section class="grid"></section>
+            <div style="display: flex; gap: 12px; margin-bottom: 16px">
+              <button class="btn btn-primary" id="financeExportBtn">
+                Exportar PDF
+              </button>
+            </div>
             <section class="grid">
+              <!-- Modal de filtro para exportação PDF -->
+              <div class="modal hidden" id="exportModal">
+                <div class="modal-card" role="dialog" aria-modal="true">
+                  <div class="modal-header">
+                    <div class="modal-title">Exportar Relatório Financeiro</div>
+                    <button class="btn btn-ghost" id="exportModalClose">
+                      Fechar
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <form id="exportFilterForm" class="form">
+                      <label>
+                        Mês
+                        <select id="filterMonth">
+                          <option value="">Todos</option>
+                        </select>
+                      </label>
+                      <label>
+                        Ano
+                        <select id="filterYear" class="input">
+                          <option value="">Todos</option>
+                        </select>
+                      </label>
+                      <label>
+                        Tipo
+                        <select id="filterType">
+                          <option value="">Ambos</option>
+                          <option value="entrada">Entradas</option>
+                          <option value="saida">Saídas</option>
+                        </select>
+                      </label>
+                      <label>
+                        Origem/Categoria
+                        <select id="filterOrigin">
+                          <option value="">Todos</option>
+                        </select>
+                      </label>
+                      <label>
+                        Busca
+                        <input
+                          type="text"
+                          id="filterSearch"
+                          placeholder="Descrição ou Referência"
+                        />
+                      </label>
+                      <button type="submit" class="btn btn-primary">
+                        Exportar PDF
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
               <div class="card">
                 <h3>Financeiro</h3>
                 <div class="stat">
@@ -438,9 +483,6 @@
                 <button class="btn btn-outline" id="financeRefreshBtn">
                   Atualizar
                 </button>
-                <button class="btn btn-ghost" id="financeExportBtn">
-                  Exportar CSV
-                </button>
               </div>
             </header>
 
@@ -576,6 +618,8 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script type="module" src="firebase.js"></script>
     <script type="module" src="playerService.js?v=2"></script>
     <script type="module" src="app.js?v=2"></script>

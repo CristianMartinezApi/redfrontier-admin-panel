@@ -1,3 +1,221 @@
+// Modal de exportação
+// Corrige inicialização dos elementos após DOM
+window.addEventListener("DOMContentLoaded", () => {
+  // Todas as variáveis de elementos
+  const financeExportBtn = document.getElementById("financeExportBtn");
+  const exportModal = document.getElementById("exportModal");
+  const exportModalClose = document.getElementById("exportModalClose");
+  const exportFilterForm = document.getElementById("exportFilterForm");
+  const filterMonth = document.getElementById("filterMonth");
+  const filterYear = document.getElementById("filterYear");
+  const filterType = document.getElementById("filterType");
+  const filterOrigin = document.getElementById("filterOrigin");
+  const filterSearch = document.getElementById("filterSearch");
+
+  // Função para popular os selects de ano e mês com períodos disponíveis
+  let periodMap = {};
+  async function populatePeriodFilters() {
+    const [entries, expenses] = await Promise.all([
+      listAllFinanceEntries(),
+      listAllExpenseEntries(),
+    ]);
+    const merged = [
+      ...entries.map((entry) => ({ ...entry, kind: "entrada" })),
+      ...expenses.map((entry) => ({ ...entry, kind: "saida" })),
+    ];
+    // Extrai anos e meses disponíveis
+    const periods = merged
+      .map((entry) => {
+        const date = entry.createdAt?.toDate ? entry.createdAt.toDate() : null;
+        if (!date) return null;
+        return {
+          year: date.getFullYear(),
+          month: date.getMonth() + 1,
+        };
+      })
+      .filter(Boolean);
+    // Mapeia anos para meses disponíveis
+    periodMap = {};
+    periods.forEach((p) => {
+      if (!periodMap[p.year]) periodMap[p.year] = new Set();
+      periodMap[p.year].add(p.month);
+    });
+    const uniqueYears = Object.keys(periodMap).sort((a, b) => b - a);
+    // Popula o select de ano
+    filterYear.innerHTML =
+      '<option value="">Todos</option>' +
+      uniqueYears.map((y) => `<option value="${y}">${y}</option>`).join("");
+    // Popula o select de mês para o ano atual
+    const currentYear = uniqueYears[0];
+    updateMonthOptions(currentYear);
+
+    // Preencher Origem/Categoria
+    const origins = new Set();
+    const categories = new Set();
+    merged.forEach((entry) => {
+      if (entry.kind === "entrada" && entry.source) origins.add(entry.source);
+      if (entry.kind === "saida" && entry.category)
+        categories.add(entry.category);
+    });
+    const allOptions = Array.from(new Set([...origins, ...categories])).sort();
+    filterOrigin.innerHTML =
+      '<option value="">Todos</option>' +
+      allOptions
+        .map((opt) => `<option value="${opt}">${opt}</option>`)
+        .join("");
+  }
+
+  function updateMonthOptions(selectedYear) {
+    let months = [];
+    if (selectedYear && periodMap[selectedYear]) {
+      months = Array.from(periodMap[selectedYear]).sort((a, b) => a - b);
+    } else {
+      // Se não há ano selecionado, mostra todos meses disponíveis
+      months = Array.from(
+        new Set(Object.values(periodMap).flatMap((set) => Array.from(set))),
+      ).sort((a, b) => a - b);
+    }
+    filterMonth.innerHTML =
+      '<option value="">Todos</option>' +
+      months
+        .map(
+          (m) =>
+            `<option value="${m}">${new Date(2000, m - 1, 1).toLocaleString("pt-BR", { month: "long" })}</option>`,
+        )
+        .join("");
+  }
+
+  filterYear.addEventListener("change", (e) => {
+    updateMonthOptions(e.target.value);
+  });
+
+  financeExportBtn.addEventListener("click", async () => {
+    await populatePeriodFilters();
+    exportModal.classList.remove("hidden");
+    exportModal.style.display = "grid";
+    exportModal.style.zIndex = "100";
+  });
+  exportModalClose.addEventListener("click", () => {
+    exportModal.classList.add("hidden");
+  });
+
+  exportFilterForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    exportModal.classList.add("hidden");
+
+    // Carrega dados
+    const [entries, expenses] = await Promise.all([
+      listAllFinanceEntries(),
+      listAllExpenseEntries(),
+    ]);
+    let merged = [
+      ...entries.map((entry) => ({ ...entry, kind: "entrada" })),
+      ...expenses.map((entry) => ({ ...entry, kind: "saida" })),
+    ];
+
+    // Aplica filtros
+    const month = filterMonth.value;
+    const year = filterYear.value;
+    const type = filterType.value;
+    const origin = filterOrigin.value.toLowerCase();
+    const search = filterSearch.value.toLowerCase();
+
+    merged = merged.filter((entry) => {
+      // Filtro mês/ano
+      let ok = true;
+      if (month || year) {
+        const date = entry.createdAt?.toDate ? entry.createdAt.toDate() : null;
+        if (date) {
+          if (month && date.getMonth() + 1 !== Number(month)) ok = false;
+          if (year && date.getFullYear() !== Number(year)) ok = false;
+        }
+      }
+      // Filtro tipo
+      if (type && entry.kind !== type) ok = false;
+      // Filtro origem/categoria
+      if (origin) {
+        const origem =
+          entry.kind === "entrada" ? entry.source || "" : entry.category || "";
+        if (!origem.toLowerCase().includes(origin)) ok = false;
+      }
+      // Filtro busca
+      if (search) {
+        const desc = (entry.description || "") + (entry.reference || "");
+        if (!desc.toLowerCase().includes(search)) ok = false;
+      }
+      return ok;
+    });
+
+    // Calcula totais
+    const totalEntradas = merged
+      .filter((e) => e.kind === "entrada")
+      .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    const totalSaidas = merged
+      .filter((e) => e.kind === "saida")
+      .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    const saldo = totalEntradas - totalSaidas;
+
+    // Gera PDF
+    const doc = new window.jspdf.jsPDF();
+    // Logo
+    const logoUrl = "assets/rdf.png";
+    const title = "Relatório Financeiro - REDFRONTIER";
+    const dateExport = new Date().toLocaleString("pt-BR");
+    // Adiciona logo
+    const img = new Image();
+    img.src = logoUrl;
+    img.onload = function () {
+      doc.addImage(img, "PNG", 150, 10, 40, 15);
+      doc.setFontSize(16);
+      doc.text(title, 10, 15);
+      doc.setFontSize(10);
+      doc.text(`Exportado em: ${dateExport}`, 10, 22);
+
+      // Cabeçalho da tabela
+      const headers = [
+        "Data",
+        "Tipo",
+        "Origem/Categoria",
+        "Descrição",
+        "Referência",
+        "Valor (R$)",
+      ];
+      const rows = merged.map((entry) => {
+        const dateText = entry.createdAt?.toDate
+          ? entry.createdAt.toDate().toLocaleDateString("pt-BR")
+          : "";
+        return [
+          dateText,
+          entry.kind,
+          entry.kind === "entrada" ? entry.source || "" : entry.category || "",
+          entry.description || "",
+          entry.reference || "",
+          parseAmount(entry.amount),
+        ];
+      });
+
+      // Adiciona tabela ao PDF
+      doc.autoTable({
+        head: [headers],
+        body: rows,
+        startY: 30,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [220, 0, 0] },
+        theme: "grid",
+      });
+
+      // Adiciona totais
+      const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 30;
+      doc.setFontSize(12);
+      doc.text(`Total Entradas: R$ ${totalEntradas.toFixed(2)}`, 10, finalY);
+      doc.text(`Total Saídas: R$ ${totalSaidas.toFixed(2)}`, 10, finalY + 7);
+      doc.text(`Saldo: R$ ${saldo.toFixed(2)}`, 10, finalY + 14);
+
+      // Baixa PDF
+      doc.save("relatorio_financeiro.pdf");
+    };
+  });
+});
 import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
@@ -104,7 +322,6 @@ const financeTotalExpenses = document.getElementById("financeTotalExpenses");
 const financeExpenseCount = document.getElementById("financeExpenseCount");
 const financeNet = document.getElementById("financeNet");
 const financeCount = document.getElementById("financeCount");
-const financeExportBtn = document.getElementById("financeExportBtn");
 const financeTrendChartCanvas = document.getElementById("financeTrendChart");
 const financeSourceChartCanvas = document.getElementById("financeSourceChart");
 const expenseCategoryChartCanvas = document.getElementById(
@@ -1044,9 +1261,14 @@ const refreshFinanceData = async () => {
   financeCount.textContent = `${summary.count} entradas`;
   financeTotalExpenses.textContent = formatCurrency(expenseSummary.total || 0);
   financeExpenseCount.textContent = `${expenseSummary.count} saidas`;
-  financeNet.textContent = formatCurrency(
-    (summary.total || 0) - (expenseSummary.total || 0),
-  );
+  const netValue = (summary.total || 0) - (expenseSummary.total || 0);
+  financeNet.textContent = formatCurrency(netValue);
+  financeNet.classList.remove("positive", "negative");
+  if (netValue > 0) {
+    financeNet.classList.add("positive");
+  } else if (netValue < 0) {
+    financeNet.classList.add("negative");
+  }
   dashboardFinanceEntries = allEntries;
   dashboardFinanceSummary = summary;
   dashboardExpenseEntries = allExpenseEntries;
@@ -1430,43 +1652,4 @@ banList.addEventListener("click", async (event) => {
   }
   await removeBanEntry(steamId);
   await refreshBanList();
-});
-
-financeExportBtn.addEventListener("click", async () => {
-  const [entries, expenses] = await Promise.all([
-    listAllFinanceEntries(),
-    listAllExpenseEntries(),
-  ]);
-  const merged = [
-    ...entries.map((entry) => ({ ...entry, kind: "entrada" })),
-    ...expenses.map((entry) => ({ ...entry, kind: "saida" })),
-  ].sort((a, b) => {
-    const dateA = getEntryDate(a) || new Date(0);
-    const dateB = getEntryDate(b) || new Date(0);
-    return dateB - dateA;
-  });
-  const rows = [
-    ["Data", "Tipo", "Origem/Categoria", "Descricao", "Referencia", "Valor"],
-    ...merged.map((entry) => {
-      const dateText = entry.createdAt?.toDate
-        ? entry.createdAt.toDate().toLocaleDateString("pt-BR")
-        : "";
-      return [
-        dateText,
-        entry.kind,
-        entry.kind === "entrada" ? entry.source || "" : entry.category || "",
-        entry.description || "",
-        entry.reference || "",
-        parseAmount(entry.amount),
-      ];
-    }),
-  ];
-  const csvContent = buildCsv(rows);
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "financeiro.csv";
-  link.click();
-  URL.revokeObjectURL(url);
 });
