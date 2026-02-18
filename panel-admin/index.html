@@ -22,8 +22,6 @@
           </div>
         </div>
 
-
-
         <!-- Navegação lateral para desktop -->
         <nav class="nav" id="mainNav">
           <button class="nav-btn" data-view="dashboard">Dashboard</button>
@@ -33,15 +31,27 @@
         </nav>
         <!-- Bottom navigation para mobile -->
         <nav class="bottom-nav" id="bottomNav">
-          <button class="bottom-nav-btn" data-view="dashboard" aria-label="Dashboard">
+          <button
+            class="bottom-nav-btn"
+            data-view="dashboard"
+            aria-label="Dashboard"
+          >
             <span class="nav-ico">🏠</span>
             <span class="nav-label">Dashboard</span>
           </button>
-          <button class="bottom-nav-btn" data-view="finance" aria-label="Financeiro">
+          <button
+            class="bottom-nav-btn"
+            data-view="finance"
+            aria-label="Financeiro"
+          >
             <span class="nav-ico">💰</span>
             <span class="nav-label">Financeiro</span>
           </button>
-          <button class="bottom-nav-btn" data-view="players" aria-label="Jogadores">
+          <button
+            class="bottom-nav-btn"
+            data-view="players"
+            aria-label="Jogadores"
+          >
             <span class="nav-ico">👤</span>
             <span class="nav-label">Jogadores</span>
           </button>
@@ -59,16 +69,17 @@
 
       <main class="content">
         <section class="login-card" id="loginView">
-          <h1>Entrar</h1>
-          <p class="muted">Acesso restrito ao staff.</p>
+          <h1>Bem-vindo ao Painel Admin</h1>
+          <p class="muted">
+            Faça login com sua conta Google para acessar o painel.
+          </p>
           <form id="loginForm" class="form">
-            <label>
-                        Ano
-                        <select id="filterYear" class="input">
-                          <option value="">Todos</option>
-                        </select>
-            <button type="submit" class="btn btn-primary">Entrar</button>
-            <button type="button" class="btn btn-google" id="googleLoginBtn">
+            <button
+              type="button"
+              class="btn btn-google"
+              id="googleLoginBtn"
+              style="margin-top: 18px"
+            >
               <span class="google-icon" aria-hidden="true">
                 <svg viewBox="0 0 48 48" role="img" focusable="false">
                   <path
@@ -294,15 +305,56 @@
             <section class="grid">
               <div class="card">
                 <h3>Pagamentos Mercado Pago</h3>
-                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin-bottom:10px;">
-                  <label style="font-size:13px;">Último saque:
-                    <input type="date" id="mpLastWithdrawDate" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid var(--line);background:rgba(9,12,18,0.8);color:var(--text);font-size:13px;">
+                <div
+                  style="
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    gap: 16px;
+                    margin-bottom: 10px;
+                  "
+                >
+                  <label style="font-size: 13px"
+                    >Último saque:
+                    <input
+                      type="date"
+                      id="mpLastWithdrawDate"
+                      style="
+                        margin-left: 6px;
+                        padding: 4px 8px;
+                        border-radius: 6px;
+                        border: 1px solid var(--line);
+                        background: rgba(9, 12, 18, 0.8);
+                        color: var(--text);
+                        font-size: 13px;
+                      "
+                    />
                   </label>
-                  <button class="btn btn-sm btn-outline" id="mpWithdrawTodayBtn" title="Registrar saque hoje">Registrar saque hoje</button>
-                  <span id="mpTotalAReceber" style="font-size:13px;color:var(--accent);font-weight:600;"></span>
-                  <span id="mpTotalNoCaixa" style="font-size:13px;color:var(--success);font-weight:600;"></span>
+                  <button
+                    class="btn btn-sm btn-outline"
+                    id="mpWithdrawTodayBtn"
+                    title="Registrar saque hoje"
+                  >
+                    Registrar saque hoje
+                  </button>
+                  <span
+                    id="mpTotalAReceber"
+                    style="
+                      font-size: 13px;
+                      color: var(--accent);
+                      font-weight: 600;
+                    "
+                  ></span>
+                  <span
+                    id="mpTotalNoCaixa"
+                    style="
+                      font-size: 13px;
+                      color: var(--success);
+                      font-weight: 600;
+                    "
+                  ></span>
                 </div>
-                <div style="overflow-x:auto;">
+                <div style="overflow-x: auto">
                   <table id="mpPaymentsTable" class="table">
                     <thead>
                       <tr>
@@ -316,9 +368,18 @@
                     </thead>
                     <tbody></tbody>
                   </table>
-                  <div id="mpPaymentsError" style="color:#c00;font-size:12px;"></div>
+                  <div
+                    id="mpPaymentsError"
+                    style="color: #c00; font-size: 12px"
+                  ></div>
                 </div>
-                <button class="btn btn-outline" id="mpPaymentsRefreshBtn" style="margin-top:8px;">Atualizar Pagamentos</button>
+                <button
+                  class="btn btn-outline"
+                  id="mpPaymentsRefreshBtn"
+                  style="margin-top: 8px"
+                >
+                  Atualizar Pagamentos
+                </button>
               </div>
             </section>
           </section>
