@@ -1,6 +1,49 @@
 // Modal de exportação
 // Corrige inicialização dos elementos após DOM
 window.addEventListener("DOMContentLoaded", () => {
+  // Navegação lateral para desktop
+  const mainNav = document.getElementById("mainNav");
+  if (mainNav) {
+    mainNav.querySelectorAll(".nav-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const view = btn.getAttribute("data-view");
+        if (view) {
+          setActiveView(view);
+        }
+      });
+    });
+    // Ativar dashboard por padrão
+    setTimeout(() => {
+      setActiveView("dashboard");
+    }, 100);
+  }
+  // Bottom navigation mobile
+  const bottomNav = document.getElementById("bottomNav");
+  if (bottomNav) {
+    bottomNav.querySelectorAll(".bottom-nav-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const view = btn.getAttribute("data-view");
+        if (view) {
+          // Ativa visualização
+          document
+            .querySelectorAll(".view")
+            .forEach((v) => v.classList.remove("active"));
+          document.getElementById(view + "View")?.classList.add("active");
+          // Ativa botão
+          bottomNav
+            .querySelectorAll(".bottom-nav-btn")
+            .forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+        }
+      });
+    });
+    // Ativar dashboard por padrão
+    setTimeout(() => {
+      bottomNav
+        .querySelector('[data-view="dashboard"]')
+        .classList.add("active");
+    }, 100);
+  }
   // Todas as variáveis de elementos
   const financeExportBtn = document.getElementById("financeExportBtn");
   const exportModal = document.getElementById("exportModal");
@@ -358,6 +401,153 @@ const playersPageSize = document.getElementById("playersPageSize");
 const playersPrevBtn = document.getElementById("playersPrevBtn");
 const playersNextBtn = document.getElementById("playersNextBtn");
 const playersPageInfo = document.getElementById("playersPageInfo");
+
+// Mercado Pago
+const mpPaymentsTable = document.getElementById("mpPaymentsTable");
+const mpPaymentsError = document.getElementById("mpPaymentsError");
+const mpPaymentsRefreshBtn = document.getElementById("mpPaymentsRefreshBtn");
+const mpLastWithdrawDate = document.getElementById("mpLastWithdrawDate");
+const mpWithdrawTodayBtn = document.getElementById("mpWithdrawTodayBtn");
+const mpTotalAReceber = document.getElementById("mpTotalAReceber");
+const mpTotalNoCaixa = document.getElementById("mpTotalNoCaixa");
+
+function getLastWithdrawDate() {
+  return localStorage.getItem("mpLastWithdrawDate") || "";
+}
+function setLastWithdrawDate(date) {
+  localStorage.setItem("mpLastWithdrawDate", date);
+}
+function getTodayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+if (mpLastWithdrawDate) {
+  mpLastWithdrawDate.value = getLastWithdrawDate();
+  mpLastWithdrawDate.addEventListener("change", (e) => {
+    setLastWithdrawDate(e.target.value);
+    fetchMpPayments();
+  });
+}
+if (mpWithdrawTodayBtn) {
+  mpWithdrawTodayBtn.addEventListener("click", () => {
+    const today = getTodayISO();
+    mpLastWithdrawDate.value = today;
+    setLastWithdrawDate(today);
+    fetchMpPayments();
+  });
+}
+
+async function fetchMpPayments() {
+  mpPaymentsError.textContent = "";
+  const tbody = mpPaymentsTable.querySelector("tbody");
+  tbody.innerHTML = '<tr><td colspan="6">Carregando...</td></tr>';
+  try {
+    // Buscar pagamentos do backend
+    const res = await fetch("http://localhost:3001/pagamentos");
+    if (!res.ok) throw new Error("Erro ao buscar pagamentos");
+    const data = await res.json();
+    const pagamentos = data.results || data || [];
+    if (!pagamentos.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="6">Nenhum pagamento encontrado.</td></tr>';
+      if (mpTotalAReceber) mpTotalAReceber.textContent = "";
+      if (mpTotalNoCaixa) mpTotalNoCaixa.textContent = "";
+      return;
+    }
+    // Lógica de filtragem por data do último saque
+    const lastWithdraw =
+      mpLastWithdrawDate && mpLastWithdrawDate.value
+        ? new Date(mpLastWithdrawDate.value + "T23:59:59")
+        : null;
+    // Classificação de tipo
+    function getTipo(mov) {
+      // Considera "entrada" pagamentos aprovados/acreditados
+      if (mov.status === "approved" || mov.status === "accredited")
+        return "entrada";
+      // fallback: valor positivo = entrada, negativo = saída
+      if (mov.transaction_amount > 0) return "entrada";
+      if (mov.transaction_amount < 0) return "saída";
+      return "-";
+    }
+    // Filtrar só pagamentos relevantes
+    const relevantes = pagamentos.filter(
+      (mov) =>
+        mov.status === "closed" ||
+        mov.status === "settled" ||
+        mov.status === "approved" ||
+        mov.status === "accredited",
+    );
+    // Separar a receber e no caixa
+    const aReceber = lastWithdraw
+      ? relevantes.filter(
+          (mov) =>
+            new Date(mov.date_created || mov.date_approved) > lastWithdraw,
+        )
+      : relevantes;
+    const noCaixa = lastWithdraw
+      ? relevantes.filter(
+          (mov) =>
+            new Date(mov.date_created || mov.date_approved) <= lastWithdraw,
+        )
+      : [];
+    // Totais
+    const totalAReceber = aReceber
+      .filter((mov) => getTipo(mov) === "entrada")
+      .reduce((sum, mov) => sum + Math.abs(mov.transaction_amount || 0), 0);
+    const totalNoCaixa = noCaixa
+      .filter((mov) => getTipo(mov) === "entrada")
+      .reduce((sum, mov) => sum + Math.abs(mov.transaction_amount || 0), 0);
+    if (mpTotalAReceber)
+      mpTotalAReceber.textContent = `A receber: R$ ${totalAReceber.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+    if (mpTotalNoCaixa)
+      mpTotalNoCaixa.textContent = `No caixa: R$ ${totalNoCaixa.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+    // Limitar visualmente a lista (máx. 15)
+    const pagamentosExibir = aReceber.slice(0, 15);
+    tbody.innerHTML = pagamentosExibir.length
+      ? pagamentosExibir
+          .map(
+            (mov) => `
+        <tr>
+          <td>${mov.id || "-"}</td>
+          <td class="status" data-status="${mov.status || "-"}">${mov.status || "-"}</td>
+          <td>${getTipo(mov)}</td>
+          <td>${Math.abs(mov.transaction_amount || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+          <td>${mov.date_created ? new Date(mov.date_created).toLocaleDateString("pt-BR") : mov.date_approved ? new Date(mov.date_approved).toLocaleDateString("pt-BR") : "-"}</td>
+          <td>${mov.payer && mov.payer.email ? mov.payer.email : mov.description || "-"}</td>
+        </tr>
+      `,
+          )
+          .join("")
+      : '<tr><td colspan="6">Nenhum pagamento a receber.</td></tr>';
+    if (aReceber.length > 15) {
+      tbody.innerHTML += `<tr><td colspan="6" style="text-align:center;color:var(--muted);font-size:12px;">Exibindo apenas as 15 mais recentes.</td></tr>`;
+    }
+  } catch (err) {
+    tbody.innerHTML = "";
+    mpPaymentsError.textContent = err.message || "Erro ao buscar pagamentos.";
+    if (mpTotalAReceber) mpTotalAReceber.textContent = "";
+    if (mpTotalNoCaixa) mpTotalNoCaixa.textContent = "";
+  }
+}
+
+if (mpPaymentsRefreshBtn) {
+  mpPaymentsRefreshBtn.addEventListener("click", fetchMpPayments);
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  if (mpLastWithdrawDate && !mpLastWithdrawDate.value) {
+    // Seta sexta-feira passada como padrão se não houver valor salvo
+    const today = new Date();
+    const day = today.getDay();
+    const diff = day >= 5 ? day - 5 : 7 - (5 - day);
+    const lastFriday = new Date(today);
+    lastFriday.setDate(today.getDate() - diff);
+    const lastFridayISO = lastFriday.toISOString().slice(0, 10);
+    mpLastWithdrawDate.value = lastFridayISO;
+    setLastWithdrawDate(lastFridayISO);
+  }
+  fetchMpPayments();
+});
 
 let playersCache = [];
 let playersFiltered = [];
@@ -1336,9 +1526,9 @@ onAuthStateChanged(auth, async (user) => {
       userEmail.textContent = "Desconectado";
       return;
     }
-    setActiveView("players");
-    refreshPlayersList();
+    setActiveView("dashboard");
     refreshFinanceData();
+    refreshPlayersList();
     refreshBanList();
     await cleanupTestNotifications();
     refreshNotifications();

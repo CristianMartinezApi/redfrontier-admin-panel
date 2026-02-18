@@ -1,9 +1,0 @@
-name = "redfrontier-mp-webhook"
-main = "worker.js"
-compatibility_date = "2025-02-01"
-
-# Add secrets via `wrangler secret put` or Cloudflare dashboard:
-# - MP_ACCESS_TOKEN
-# - FIREBASE_PROJECT_ID
-# - FIREBASE_CLIENT_EMAIL
-# - FIREBASE_PRIVATE_KEY

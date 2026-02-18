@@ -22,11 +22,33 @@
           </div>
         </div>
 
-        <nav class="nav">
-          <button class="nav-btn" data-view="players">Jogadores</button>
-          <button class="nav-btn" data-view="finance">Financeiro</button>
-          <button class="nav-btn" data-view="ban">Banidos</button>
+
+
+        <!-- Navegação lateral para desktop -->
+        <nav class="nav" id="mainNav">
           <button class="nav-btn" data-view="dashboard">Dashboard</button>
+          <button class="nav-btn" data-view="finance">Financeiro</button>
+          <button class="nav-btn" data-view="players">Jogadores</button>
+          <button class="nav-btn" data-view="ban">Banidos</button>
+        </nav>
+        <!-- Bottom navigation para mobile -->
+        <nav class="bottom-nav" id="bottomNav">
+          <button class="bottom-nav-btn" data-view="dashboard" aria-label="Dashboard">
+            <span class="nav-ico">🏠</span>
+            <span class="nav-label">Dashboard</span>
+          </button>
+          <button class="bottom-nav-btn" data-view="finance" aria-label="Financeiro">
+            <span class="nav-ico">💰</span>
+            <span class="nav-label">Financeiro</span>
+          </button>
+          <button class="bottom-nav-btn" data-view="players" aria-label="Jogadores">
+            <span class="nav-ico">👤</span>
+            <span class="nav-label">Jogadores</span>
+          </button>
+          <button class="bottom-nav-btn" data-view="ban" aria-label="Banidos">
+            <span class="nav-ico">🚫</span>
+            <span class="nav-label">Banidos</span>
+          </button>
         </nav>
 
         <div class="sidebar-footer">
@@ -265,6 +287,38 @@
                     aria-label="Grafico de status de beneficios"
                   ></canvas>
                 </div>
+              </div>
+            </section>
+
+            <!-- Card Mercado Pago movido para baixo -->
+            <section class="grid">
+              <div class="card">
+                <h3>Pagamentos Mercado Pago</h3>
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin-bottom:10px;">
+                  <label style="font-size:13px;">Último saque:
+                    <input type="date" id="mpLastWithdrawDate" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid var(--line);background:rgba(9,12,18,0.8);color:var(--text);font-size:13px;">
+                  </label>
+                  <button class="btn btn-sm btn-outline" id="mpWithdrawTodayBtn" title="Registrar saque hoje">Registrar saque hoje</button>
+                  <span id="mpTotalAReceber" style="font-size:13px;color:var(--accent);font-weight:600;"></span>
+                  <span id="mpTotalNoCaixa" style="font-size:13px;color:var(--success);font-weight:600;"></span>
+                </div>
+                <div style="overflow-x:auto;">
+                  <table id="mpPaymentsTable" class="table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Status</th>
+                        <th>Tipo</th>
+                        <th>Valor</th>
+                        <th>Data</th>
+                        <th>Email</th>
+                      </tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                  <div id="mpPaymentsError" style="color:#c00;font-size:12px;"></div>
+                </div>
+                <button class="btn btn-outline" id="mpPaymentsRefreshBtn" style="margin-top:8px;">Atualizar Pagamentos</button>
               </div>
             </section>
           </section>
