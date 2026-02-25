@@ -7,6 +7,10 @@
     <link rel="icon" href="assets/favicon.ico" type="image/x-icon" />
     <link rel="icon" href="assets/rdf.png" type="image/png" />
     <link rel="stylesheet" href="styles.css" />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div class="bg-grid"></div>
@@ -145,62 +149,22 @@
               </div>
             </header>
 
-            <section class="grid"></section>
-            <div style="display: flex; gap: 12px; margin-bottom: 16px">
-              <button class="btn btn-primary" id="financeExportBtn">
-                Exportar PDF
-              </button>
-            </div>
             <section class="grid">
-              <!-- Modal de filtro para exportação PDF -->
-              <div class="modal hidden" id="exportModal">
-                <div class="modal-card" role="dialog" aria-modal="true">
-                  <div class="modal-header">
-                    <div class="modal-title">Exportar Relatório Financeiro</div>
-                    <button class="btn btn-ghost" id="exportModalClose">
-                      Fechar
-                    </button>
-                  </div>
-                  <div class="modal-body">
-                    <form id="exportFilterForm" class="form">
-                      <label>
-                        Mês
-                        <select id="filterMonth">
-                          <option value="">Todos</option>
-                        </select>
-                      </label>
-                      <label>
-                        Ano
-                        <select id="filterYear" class="input">
-                          <option value="">Todos</option>
-                        </select>
-                      </label>
-                      <label>
-                        Tipo
-                        <select id="filterType">
-                          <option value="">Ambos</option>
-                          <option value="entrada">Entradas</option>
-                          <option value="saida">Saídas</option>
-                        </select>
-                      </label>
-                      <label>
-                        Origem/Categoria
-                        <select id="filterOrigin">
-                          <option value="">Todos</option>
-                        </select>
-                      </label>
-                      <label>
-                        Busca
-                        <input
-                          type="text"
-                          id="filterSearch"
-                          placeholder="Descrição ou Referência"
-                        />
-                      </label>
-                      <button type="submit" class="btn btn-primary">
-                        Exportar PDF
-                      </button>
-                    </form>
+              <!-- Cards financeiros -->
+              <div class="card mp-card">
+                <h3 style="display: flex; align-items: center; gap: 8px">
+                  <img
+                    src="assets/mercadopago.svg"
+                    alt="Mercado Pago"
+                    style="height: 22px; vertical-align: middle"
+                  />
+                  Mercado Pago
+                </h3>
+                <div class="stat">
+                  <div class="stat-label">Total Mercado Pago</div>
+                  <div class="stat-value" id="mpTotal">R$ 0,00</div>
+                  <div class="stat-sub" id="mpLastStatus">
+                    Última transação: <span id="mpLastStatusValue">-</span>
                   </div>
                 </div>
               </div>
@@ -247,6 +211,15 @@
             </section>
 
             <section class="grid">
+              <!-- Gráficos -->
+              <div class="card chart-card">
+                <div class="card-header">
+                  <h3>Evolução dos Pagamentos</h3>
+                </div>
+                <div class="chart-wrap">
+                  <canvas id="mpChart" height="120"></canvas>
+                </div>
+              </div>
               <div class="card chart-card">
                 <div class="card-header">
                   <h3>Entradas x saidas</h3>
@@ -303,31 +276,46 @@
 
             <!-- Card Mercado Pago movido para baixo -->
             <section class="grid">
+              <!-- Card de controles e totais -->
               <div class="card">
-                <h3>Pagamentos Mercado Pago</h3>
-                <div
-                  style="
-                    display: flex;
-                    flex-wrap: wrap;
-                    align-items: center;
-                    gap: 16px;
-                    margin-bottom: 10px;
-                  "
-                >
-                  <label style="font-size: 13px"
+                <h3>Controles Mercado Pago</h3>
+                <div class="mp-pg-header">
+                  <div
+                    style="
+                      margin-bottom: 10px;
+                      display: flex;
+                      align-items: center;
+                      gap: 8px;
+                    "
+                  >
+                    <label for="mpPaymentsLimit" style="font-size: 13px"
+                      >Exibir</label
+                    >
+                    <select
+                      id="mpPaymentsLimit"
+                      style="
+                        padding: 2px 8px;
+                        border-radius: 6px;
+                        border: 1px solid var(--line);
+                        font-size: 13px;
+                      "
+                    >
+                      <option value="15">15</option>
+                      <option value="30">30</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                      <option value="all">Todos</option>
+                    </select>
+                    <span style="font-size: 13px; color: var(--muted)"
+                      >registros</span
+                    >
+                  </div>
+                  <label class="mp-pg-label"
                     >Último saque:
                     <input
                       type="date"
                       id="mpLastWithdrawDate"
-                      style="
-                        margin-left: 6px;
-                        padding: 4px 8px;
-                        border-radius: 6px;
-                        border: 1px solid var(--line);
-                        background: rgba(9, 12, 18, 0.8);
-                        color: var(--text);
-                        font-size: 13px;
-                      "
+                      class="mp-pg-date"
                     />
                   </label>
                   <button
@@ -335,25 +323,22 @@
                     id="mpWithdrawTodayBtn"
                     title="Registrar saque hoje"
                   >
+                    <span class="material-icons mp-pg-icon">event</span>
                     Registrar saque hoje
                   </button>
                   <span
                     id="mpTotalAReceber"
-                    style="
-                      font-size: 13px;
-                      color: var(--accent);
-                      font-weight: 600;
-                    "
+                    class="mp-pg-total mp-pg-accent"
                   ></span>
                   <span
                     id="mpTotalNoCaixa"
-                    style="
-                      font-size: 13px;
-                      color: var(--success);
-                      font-weight: 600;
-                    "
+                    class="mp-pg-total mp-pg-success"
                   ></span>
                 </div>
+              </div>
+              <!-- Card da tabela de pagamentos -->
+              <div class="card">
+                <h3>Pagamentos Mercado Pago</h3>
                 <div style="overflow-x: auto">
                   <table id="mpPaymentsTable" class="table">
                     <thead>
@@ -363,6 +348,7 @@
                         <th>Tipo</th>
                         <th>Valor</th>
                         <th>Data</th>
+                        <th>Nome</th>
                         <th>Email</th>
                       </tr>
                     </thead>
@@ -374,10 +360,11 @@
                   ></div>
                 </div>
                 <button
-                  class="btn btn-outline"
+                  class="btn btn-outline mp-pg-refresh"
                   id="mpPaymentsRefreshBtn"
-                  style="margin-top: 8px"
+                  title="Atualizar pagamentos"
                 >
+                  <span class="material-icons mp-pg-icon">refresh</span>
                   Atualizar Pagamentos
                 </button>
               </div>
