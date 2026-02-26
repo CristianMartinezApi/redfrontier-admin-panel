@@ -443,7 +443,9 @@ async function fetchMpPayments() {
   tbody.innerHTML = '<tr><td colspan="6">Carregando...</td></tr>';
   try {
     // Buscar pagamentos do backend
-    const res = await fetch("http://localhost:3001/pagamentos");
+    const res = await fetch(
+      "https://redfrontier-admin-panel.onrender.com/pagamentos",
+    );
     if (!res.ok) throw new Error("Erro ao buscar pagamentos");
     const data = await res.json();
     const pagamentos = data.results || data || [];
